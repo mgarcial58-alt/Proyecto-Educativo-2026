@@ -1,0 +1,5 @@
+1. En XAMPP iniciar MySQL e importar database/schema.sql desde phpMyAdmin.
+2. En backend copiar .env.example como .env; ajustar credenciales MySQL si es necesario.
+3. En terminal dentro de backend ejecutar npm install y npm run dev.
+4. Abrir http://localhost:3001/api/salud; debe mostrar {"ok":true}.
+El frontend se agregará en la siguiente etapa.
