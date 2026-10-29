@@ -1,5 +1,21 @@
-1. En XAMPP iniciar MySQL e importar database/schema.sql desde phpMyAdmin.
-2. En backend copiar .env.example como .env; ajustar credenciales MySQL si es necesario.
-3. En terminal dentro de backend ejecutar npm install y npm run dev.
-4. Abrir http://localhost:3001/api/salud; debe mostrar {"ok":true}.
-El frontend se agregará en la siguiente etapa.
+EXPLORA Y APRENDE 2026 — INICIO RÁPIDO
+
+1. Lee README.md en la raíz del proyecto. Incluye comandos completos para Windows.
+2. Usa Node.js 24 y MySQL local de prueba. Conserva los archivos .env existentes.
+3. En backend ejecuta npm ci y npm run configurar-docente.
+   La contraseña se introduce en una terminal privada con entrada oculta.
+   Nunca la envíes por chat. No subas .env ni .env.auth a GitHub.
+4. Configura backend/.env con la conexión a la base LOCAL y ejecuta npm run dev.
+5. En otra terminal, dentro de frontend, ejecuta npm ci y npm run dev.
+6. Abre http://localhost:5173. Los seis juegos siguen disponibles para estudiantes.
+7. Entra en Docentes con tu contraseña. Cierra sesión al terminar.
+
+No hay que modificar el esquema existente ni importar schema.sql en producción.
+Los alumnos antiguos pueden habilitarse desde el panel docente en cada dispositivo.
+La lista pública solo muestra perfiles recordados en ese navegador.
+
+Pruebas: backend > npm test; frontend > npm run build.
+Las pruebas de API usan datos simulados; verifica también MySQL local manualmente.
+
+Publicación y seguridad: documentacion/DESPLIEGUE-SEGURO.md.
+No hacer git push, desplegar o reiniciar producción hasta autorizar la publicación.

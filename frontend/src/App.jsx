@@ -1,19 +1,300 @@
-import {useEffect,useState} from 'react';import './App.css';
-const API=import.meta.env.VITE_API_URL||'http://localhost:3001';
-async function request(path,options){const r=await fetch(API+path,{headers:{'Content-Type':'application/json'},...options});const data=await r.json();if(!r.ok)throw Error(data.error||'Error de conexión');return data}
-const emoji={espacial:'🧭',figuras:'🔷',memoria:'🧠',tablas:'✖️',fracciones:'🍕',decimales:'🔢'};
-const random=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-const shuffle=a=>[...a].sort(()=>Math.random()-.5);
-function generate(code){if(code==='espacial'){const pairs=[['¿Dónde está el gato? 🐱🏠','Adentro','Afuera'],['¿Dónde vuela el avión? ✈️☁️','Arriba','Abajo'],['¿Qué está cerca de la casa? 🏠🌳       🚗','Árbol','Carro'],['¿Dónde está la estrella? ⭐📦','Encima','Debajo']];const p=pairs[random(0,pairs.length-1)];return{q:p[0],answer:p[1],options:shuffle([p[1],p[2]])}}if(code==='figuras'){const f=[['⚪','Círculo'],['🟦','Cuadrado'],['🔺','Triángulo'],['▭','Rectángulo']];const x=f[random(0,3)];return{q:'¿Qué figura es esta? '+x[0],answer:x[1],options:shuffle(f.map(z=>z[1]))}}if(code==='tablas'){const a=random(2,10),b=random(1,10),v=a*b;return{q:`¿Cuánto es ${a} × ${b}?`,answer:String(v),options:shuffle([...new Set([v,v+a,v+b,v+random(1,8)])].map(String))}}if(code==='fracciones'){const d=[2,3,4,5,6,8][random(0,5)],a=random(1,d-1),b=random(1,d-1),n=a+b;const gcd=(x,y)=>y?gcd(y,x%y):x;const format=(x,y)=>{let g=gcd(x,y);return `${x/g}/${y/g}`};const correct=format(n,d);return{q:`¿Cuánto es ${a}/${d} + ${b}/${d}?`,answer:correct,options:shuffle([...new Set([correct,format(n+1,d),format(Math.max(1,n-1),d),format(n,d+1),format(n+2,d)])].slice(0,4))}}const a=random(11,99)/10,b=random(2,9),v=(a*b).toFixed(1);return{q:`¿Cuánto es ${a.toFixed(1)} × ${b}?`,answer:v,options:shuffle([...new Set([v,(a*(b+1)).toFixed(1),(a*(b-1)).toFixed(1),(a*b+1).toFixed(1)])])}}
-const icons=['🐶','🐱','🦊','🐼','🐸','🦋'];function newCards(){return shuffle(icons.slice(0,4).flatMap((symbol,i)=>[{id:i+'a',symbol},{id:i+'b',symbol}]))}
-export default function App(){const [page,setPage]=useState('inicio'),[students,setStudents]=useState([]),[activities,setActivities]=useState([]),[student,setStudent]=useState(null),[name,setName]=useState(''),[age,setAge]=useState(''),[level,setLevel]=useState('preprimaria'),[activity,setActivity]=useState(null),[question,setQuestion]=useState(null),[index,setIndex]=useState(0),[score,setScore]=useState(0),[feedback,setFeedback]=useState(null),[reports,setReports]=useState([]),[filter,setFilter]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[cards,setCards]=useState([]),[flipped,setFlipped]=useState([]),[matched,setMatched]=useState([]);
-useEffect(()=>{Promise.all([request('/api/actividades'),request('/api/estudiantes')]).then(([a,s])=>{setActivities(a);setStudents(s)}).catch(e=>setError(e.message))},[]);
-const navigate=p=>{setError('');setPage(p)};
-async function register(e){e.preventDefault();setBusy(true);setError('');try{const s=await request('/api/estudiantes',{method:'POST',body:JSON.stringify({nombre:name,edad:Number(age)})});setStudents(v=>[...v,s]);setStudent(s);navigate('niveles')}catch(e){setError(e.message)}finally{setBusy(false)}}
-function start(a){setActivity(a);setIndex(0);setScore(0);setFeedback(null);setCards(newCards());setFlipped([]);setMatched([]);setQuestion(generate(a.codigo==='memoria'?'figuras':a.codigo));navigate('juego')}
-function answer(value){if(feedback)return;const correct=value===question.answer;setScore(s=>s+(correct?1:0));setFeedback(correct?'¡Muy bien! 🎉':`La respuesta era ${question.answer}`)}
-async function next(){if(index===4){await finish(score);return}setIndex(i=>i+1);setQuestion(generate(activity.codigo));setFeedback(null)}
-async function finish(finalScore){setBusy(true);setError('');try{await request('/api/progresos',{method:'POST',body:JSON.stringify({estudiante_id:student.id,actividad_id:activity.id,puntaje:finalScore,total:activity.codigo==='memoria'?4:5})});navigate('resultado')}catch(e){setError('No se pudo guardar el progreso: '+e.message)}finally{setBusy(false)}}
-function flip(i){if(flipped.includes(i)||matched.includes(i)||flipped.length>=2||busy)return;const next=[...flipped,i];setFlipped(next);if(next.length===2){const ok=cards[next[0]].symbol===cards[next[1]].symbol;if(ok){const newMatched=[...matched,...next];setMatched(newMatched);setScore(newMatched.length/2);setFlipped([]);if(newMatched.length===8){setBusy(true);request('/api/progresos',{method:'POST',body:JSON.stringify({estudiante_id:student.id,actividad_id:activity.id,puntaje:4,total:4})}).then(()=>navigate('resultado')).catch(e=>setError(e.message)).finally(()=>setBusy(false))}}else{setBusy(true);setTimeout(()=>{setFlipped([]);setBusy(false)},800)}}}
-async function openReports(){try{setReports(await request('/api/progresos'));navigate('docentes')}catch(e){setError(e.message)}}
-return <div className="app"><header><button className="brand" onClick={()=>navigate('inicio')}>🌈 Explora y Aprende</button><nav><button onClick={()=>navigate('inicio')}>Inicio</button><button onClick={openReports}>👩‍🏫 Docentes</button></nav></header><main>{error&&<div className="alert">⚠️ {error}</div>}{page==='inicio'&&<section className="hero"><span className="mascot">🚀🪐🌟</span><div className="hero-badges"><span>✨ Explora</span><span>🎨 Descubre</span><span>🏆 Aprende</span></div><h1>¡Aprender es una aventura!</h1><p>Un universo de juegos y desafíos para pequeños exploradores. ¡Cada respuesta es una nueva estrella!</p><button className="primary" onClick={()=>navigate(student?'niveles':'registro')}>¡Comenzar a jugar! →</button><div className="features"><span>🎨 Aprende jugando</span><span>🏆 Gana puntos</span><span>📈 Sigue tu progreso</span></div><div className="home-showcase"><div className="showcase-item"><span className="showcase-icon">🧸</span><div><b>Preprimaria</b><small>Figuras, espacios y memoria</small></div></div><div className="showcase-item"><span className="showcase-icon">🧮</span><div><b>Primaria</b><small>Multiplica y resuelve desafíos</small></div></div><div className="showcase-item"><span className="showcase-icon">🌟</span><div><b>Tus logros</b><small>Gana estrellas y observa tu avance</small></div></div></div></section>}{page==='registro'&&<section className="panel small"><h1>👋 ¡Hola, explorador!</h1><p>Cuéntanos quién eres para guardar tus estrellas.</p><form onSubmit={register}><label>Tu nombre<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="Escribe tu nombre"/></label><label>Tu edad<input type="number" required min="3" max="18" value={age} onChange={e=>setAge(e.target.value)} placeholder="¿Cuántos años tienes?"/></label><button disabled={busy} className="primary">¡Continuar! →</button></form>{students.length>0&&<><p>¿Ya jugaste antes? Selecciona tu nombre:</p><select value="" onChange={e=>{const s=students.find(x=>String(x.id)===e.target.value);if(s){setStudent(s);navigate('niveles')}}}><option value="">Elegir estudiante</option>{students.map(s=><option key={s.id} value={s.id}>{s.nombre} ({s.edad} años)</option>)}</select></>}</section>}{page==='niveles'&&<section><h1>¡Hola, {student?.nombre}! 👋</h1><p>Elige tu nivel para empezar la aventura.</p><div className="cards"><button className="tile" onClick={()=>{setLevel('preprimaria');navigate('catalogo')}}><span>🧸</span><h2>Preprimaria</h2><p>Espacios, figuras y memoria</p></button><button className="tile" onClick={()=>{setLevel('primaria');navigate('catalogo')}}><span>📚</span><h2>Primaria</h2><p>Multiplicaciones, fracciones y decimales</p></button></div></section>}{page==='catalogo'&&<section><button className="back" onClick={()=>navigate('niveles')}>← Volver a niveles</button><h1>{level==='preprimaria'?'🧸 Preprimaria':'📚 Primaria'}</h1><p>Selecciona una actividad para jugar.</p><div className="cards">{activities.filter(a=>a.nivel===level).map(a=><button className="tile" key={a.id} onClick={()=>start(a)}><span>{emoji[a.codigo]}</span><h2>{a.titulo}</h2><p>¡Jugar ahora! →</p></button>)}</div></section>}{page==='juego'&&<section className="panel game"><button className="back" onClick={()=>navigate('catalogo')}>← Salir del juego</button><h2>{emoji[activity?.codigo]} {activity?.titulo}</h2>{activity?.codigo==='memoria'?<><p>Encuentra los cuatro pares de animales.</p><p>⭐ Pares encontrados: {matched.length/2} de 4</p><div className="memory">{cards.map((c,i)=><button key={c.id} disabled={matched.includes(i)} className={'memory-card '+(matched.includes(i)?'matched':'')} onClick={()=>flip(i)}>{flipped.includes(i)||matched.includes(i)?c.symbol:'❔'}</button>)}</div></>:<><div className="progress"><div style={{width:`${(index+1)*20}%`}}/></div><p>Pregunta {index+1} de 5 · ⭐ {score} puntos</p><h1 className="question">{question?.q}</h1><div className="options">{question?.options.map(o=><button disabled={!!feedback} key={o} onClick={()=>answer(o)}>{o}</button>)}</div>{feedback&&<div className="feedback"><strong>{feedback}</strong><button className="primary" disabled={busy} onClick={next}>{index===4?'Guardar resultado':'Siguiente →'}</button></div>}</>}</section>}{page==='resultado'&&<section className="hero"><span className="mascot">🏆🎊</span><h1>¡Excelente trabajo, {student?.nombre}!</h1><p>Completaste {activity?.titulo}.</p><div className="result">⭐ {score} / {activity?.codigo==='memoria'?4:5}</div><p>Tu resultado se guardó en la base de datos.</p><button className="primary" onClick={()=>navigate('catalogo')}>Jugar otra actividad →</button></section>}{page==='docentes'&&<section><button className="back" onClick={()=>navigate('inicio')}>← Volver</button><h1>📊 Panel de docentes</h1><p>Consulta los resultados guardados en MySQL.</p><div className="filter"><label>Filtrar por estudiante<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="">Todos los estudiantes</option>{students.map(s=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label><button onClick={openReports}>↻ Actualizar</button></div><div className="table-wrap"><table><thead><tr><th>Estudiante</th><th>Actividad</th><th>Puntaje</th><th>Fecha</th></tr></thead><tbody>{reports.filter(r=>!filter||String(r.estudiante_id)===filter).map(r=><tr key={r.id}><td>{r.estudiante}</td><td>{r.actividad}</td><td>{r.puntaje}/{r.total}</td><td>{new Date(r.fecha).toLocaleString('es-GT')}</td></tr>)}</tbody></table>{!reports.some(r=>!filter||String(r.estudiante_id)===filter)&&<p className="empty">Todavía no hay resultados para mostrar.</p>}</div></section>}</main><footer>🌈 Explora y Aprende · Proyecto de Desarrollo Web 2026</footer></div>}
+import { useEffect, useRef, useState } from 'react';
+import { request } from './api';
+import { readProfiles, saveProfiles, validProfile } from './studentProfiles';
+import { emoji, generate, newCards } from './games';
+import TeacherPanel from './TeacherPanel';
+import './App.css';
+
+export default function App() {
+  const [page, setPage] = useState('inicio');
+  const [profiles, setProfiles] = useState(readProfiles);
+  const [activities, setActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [activitiesError, setActivitiesError] = useState('');
+  const [student, setStudent] = useState(null);
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [level, setLevel] = useState('preprimaria');
+  const [activity, setActivity] = useState(null);
+  const [question, setQuestion] = useState(null);
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [error, setError] = useState('');
+  const [storageNotice, setStorageNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [cards, setCards] = useState([]);
+  const [flipped, setFlipped] = useState([]);
+  const [matched, setMatched] = useState([]);
+  const [saved, setSaved] = useState(false);
+  const saving = useRef(false);
+  const choosingStudent = useRef(false);
+  const memoryTimer = useRef(null);
+  const mounted = useRef(false);
+
+  async function loadActivities() {
+    setActivitiesLoading(true);
+    setActivitiesError('');
+    try {
+      const result = await request('/api/actividades');
+      if (mounted.current) setActivities(result);
+    } catch (failure) {
+      if (mounted.current) setActivitiesError('No se pudieron cargar los juegos. ' + failure.message);
+    } finally {
+      if (mounted.current) setActivitiesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    mounted.current = true;
+    loadActivities();
+    return () => {
+      mounted.current = false;
+      clearTimeout(memoryTimer.current);
+    };
+  }, []);
+
+  function navigate(nextPage) {
+    setError('');
+    setPage(nextPage);
+  }
+
+  function updateProfiles(nextProfiles) {
+    const remaining = nextProfiles.filter(validProfile).slice(-50);
+    setProfiles(remaining);
+    setStorageNotice(saveProfiles(remaining) ? '' : 'Puedes jugar durante esta visita, pero este navegador no permite recordar tu acceso.');
+  }
+
+  function rememberStudent(profile) {
+    updateProfiles([...profiles.filter(item => item.id !== profile.id), profile]);
+    setStudent(profile);
+    setName('');
+    setAge('');
+    navigate('niveles');
+  }
+
+  function forgetStudent(id) {
+    updateProfiles(profiles.filter(profile => profile.id !== id));
+    if (student?.id === id) setStudent(null);
+    setError('');
+  }
+
+  async function register(event) {
+    event.preventDefault();
+    if (choosingStudent.current) return;
+    choosingStudent.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const profile = await request('/api/estudiantes', {
+        method: 'POST', body: JSON.stringify({ nombre: name, edad: Number(age) }),
+      });
+      if (mounted.current) rememberStudent(profile);
+    } catch (failure) {
+      if (mounted.current) setError(failure.message);
+    } finally {
+      choosingStudent.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
+
+  async function selectStudent(profile) {
+    if (choosingStudent.current) return;
+    choosingStudent.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const confirmed = await request('/api/mi-estudiante', { token: profile.token });
+      if (mounted.current) rememberStudent({ ...profile, ...confirmed });
+    } catch (failure) {
+      if (!mounted.current) return;
+      if (failure.status === 401 || failure.status === 404) {
+        forgetStudent(profile.id);
+        setError('Este acceso venció o dejó de ser válido. Pide a tu docente que lo habilite de nuevo para conservar tus resultados.');
+      } else setError(failure.message);
+    } finally {
+      choosingStudent.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
+
+  function start(selectedActivity) {
+    if (!student || !validProfile(student)) {
+      if (student) forgetStudent(student.id);
+      navigate('registro');
+      setError('Tu acceso venció. Pide ayuda a tu docente para continuar con el mismo historial.');
+      return;
+    }
+    clearTimeout(memoryTimer.current);
+    setActivity(selectedActivity);
+    setIndex(0);
+    setScore(0);
+    setFeedback(null);
+    setCards(newCards());
+    setFlipped([]);
+    setMatched([]);
+    setSaved(false);
+    setQuestion(generate(selectedActivity.codigo === 'memoria' ? 'figuras' : selectedActivity.codigo));
+    navigate('juego');
+  }
+
+  function answer(value) {
+    if (feedback || busy) return;
+    const correct = value === question.answer;
+    setScore(previous => previous + (correct ? 1 : 0));
+    setFeedback(correct ? '¡Muy bien! 🎉' : `La respuesta era ${question.answer}`);
+  }
+
+  async function next() {
+    if (index === 4) {
+      await finish(score);
+      return;
+    }
+    setIndex(previous => previous + 1);
+    setQuestion(generate(activity.codigo));
+    setFeedback(null);
+  }
+
+  async function finish(finalScore) {
+    if (saving.current || saved) return;
+    saving.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      await request('/api/progresos', {
+        method: 'POST', token: student.token,
+        body: JSON.stringify({ estudiante_id: student.id, actividad_id: activity.id,
+          puntaje: finalScore, total: activity.codigo === 'memoria' ? 4 : 5 }),
+      });
+      if (mounted.current) {
+        setSaved(true);
+        navigate('resultado');
+      }
+    } catch (failure) {
+      if (mounted.current) setError(failure.status === 401
+        ? 'Tu acceso dejó de ser válido. El resultado aún no se guardó. Pide ayuda a tu docente para habilitar tu acceso.'
+        : 'No se pudo confirmar el guardado. Comprueba la conexión y vuelve a pulsar Guardar resultado.');
+    } finally {
+      saving.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  }
+
+  function flip(indexToFlip) {
+    if (flipped.includes(indexToFlip) || matched.includes(indexToFlip) || flipped.length >= 2 || busy) return;
+    const nextFlipped = [...flipped, indexToFlip];
+    setFlipped(nextFlipped);
+    if (nextFlipped.length !== 2) return;
+    const correct = cards[nextFlipped[0]].symbol === cards[nextFlipped[1]].symbol;
+    if (correct) {
+      const nextMatched = [...matched, ...nextFlipped];
+      setMatched(nextMatched);
+      setScore(nextMatched.length / 2);
+      setFlipped([]);
+      if (nextMatched.length === 8) finish(4);
+    } else {
+      setBusy(true);
+      memoryTimer.current = setTimeout(() => {
+        setFlipped([]);
+        setBusy(false);
+      }, 800);
+    }
+  }
+
+  const availableProfiles = profiles.filter(validProfile);
+
+  return <div className="app">
+    <header>
+      <button className="brand" disabled={busy} onClick={() => navigate('inicio')}>🌈 Explora y Aprende</button>
+      <nav aria-label="Navegación principal">
+        <button disabled={busy} onClick={() => navigate('inicio')}>Inicio</button>
+        <button disabled={busy} onClick={() => navigate('docentes')}>👩‍🏫 Docentes</button>
+      </nav>
+    </header>
+    <main>
+      {error && <div className="alert" role="alert">⚠️ {error}</div>}
+      {storageNotice && page !== 'docentes' && <p className="notice" role="status">{storageNotice}</p>}
+      {page === 'inicio' && <section className="hero">
+        <span className="mascot">🚀🪐🌟</span>
+        <div className="hero-badges"><span>✨ Explora</span><span>🎨 Descubre</span><span>🏆 Aprende</span></div>
+        <h1>¡Aprender es una aventura!</h1>
+        <p>Un universo de juegos y desafíos para pequeños exploradores. ¡Cada respuesta es una nueva estrella!</p>
+        <button className="primary" onClick={() => navigate(student ? 'niveles' : 'registro')}>¡Comenzar a jugar! →</button>
+        <div className="features"><span>🎨 Aprende jugando</span><span>🏆 Gana puntos</span><span>📈 Sigue tu progreso</span></div>
+        <div className="home-showcase">
+          <div className="showcase-item"><span className="showcase-icon">🧸</span><div><b>Preprimaria</b><small>Figuras, espacios y memoria</small></div></div>
+          <div className="showcase-item"><span className="showcase-icon">🧮</span><div><b>Primaria</b><small>Multiplica y resuelve desafíos</small></div></div>
+          <div className="showcase-item"><span className="showcase-icon">🌟</span><div><b>Tus logros</b><small>Gana estrellas y observa tu avance</small></div></div>
+        </div>
+      </section>}
+      {page === 'registro' && <section className="panel small">
+        <h1>👋 ¡Hola, explorador!</h1>
+        <p>Cuéntanos quién eres para guardar tus estrellas.</p>
+        <form onSubmit={register}>
+          <label>Tu nombre<input required maxLength={100} value={name} disabled={busy}
+            onChange={event => setName(event.target.value)} placeholder="Escribe tu nombre" autoComplete="given-name" /></label>
+          <label>Tu edad<input type="number" required min="3" max="18" value={age} disabled={busy}
+            onChange={event => setAge(event.target.value)} placeholder="¿Cuántos años tienes?" /></label>
+          <button disabled={busy} className="primary">{busy ? 'Preparando tu acceso…' : '¡Continuar! →'}</button>
+        </form>
+        {availableProfiles.length > 0 && <div className="remembered-students">
+          <h2>¿Ya jugaste en este dispositivo?</h2>
+          <p>Elige tu nombre para continuar.</p>
+          <ul>{availableProfiles.map(profile => <li key={profile.id}>
+            <button className="profile-button" disabled={busy} onClick={() => selectStudent(profile)}>
+              {profile.nombre} ({profile.edad} años)
+            </button>
+            <button className="forget-button" disabled={busy} onClick={() => forgetStudent(profile.id)}
+              aria-label={`Olvidar acceso de ${profile.nombre} en este dispositivo`}>Olvidar</button>
+          </li>)}</ul>
+          <p className="help-text">«Olvidar» quita el acceso de este dispositivo. Tus resultados guardados se conservan.</p>
+        </div>}
+        <p className="help-text">Solo aparecen los accesos guardados aquí. Si ya tenías resultados y no encuentras tu nombre, pide a tu docente que habilite tu acceso en este dispositivo.</p>
+      </section>}
+      {page === 'niveles' && <section>
+        <button className="back" onClick={() => navigate('registro')}>Cambiar estudiante</button>
+        <h1>¡Hola, {student?.nombre}! 👋</h1><p>Elige tu nivel para empezar la aventura.</p>
+        <div className="cards">
+          <button className="tile" onClick={() => { setLevel('preprimaria'); navigate('catalogo'); }}><span>🧸</span><h2>Preprimaria</h2><p>Espacios, figuras y memoria</p></button>
+          <button className="tile" onClick={() => { setLevel('primaria'); navigate('catalogo'); }}><span>📚</span><h2>Primaria</h2><p>Multiplicaciones, fracciones y decimales</p></button>
+        </div>
+      </section>}
+      {page === 'catalogo' && <section>
+        <button className="back" onClick={() => navigate('niveles')}>← Volver a niveles</button>
+        <h1>{level === 'preprimaria' ? '🧸 Preprimaria' : '📚 Primaria'}</h1><p>Selecciona una actividad para jugar.</p>
+        {activitiesLoading && <p role="status">Cargando juegos…</p>}
+        {activitiesError && <div className="alert" role="alert">{activitiesError} <button onClick={loadActivities}>Reintentar</button></div>}
+        <div className="cards">{activities.filter(item => item.nivel === level).map(item =>
+          <button className="tile" key={item.id} onClick={() => start(item)}><span>{emoji[item.codigo]}</span><h2>{item.titulo}</h2><p>¡Jugar ahora! →</p></button>)}</div>
+      </section>}
+      {page === 'juego' && <section className="panel game">
+        <button className="back" disabled={busy} onClick={() => navigate('catalogo')}>← Salir del juego</button>
+        <h2>{emoji[activity?.codigo]} {activity?.titulo}</h2>
+        {activity?.codigo === 'memoria' ? <>
+          <p>Encuentra los cuatro pares de animales.</p><p>⭐ Pares encontrados: {matched.length / 2} de 4</p>
+          <div className="memory">{cards.map((card, cardIndex) => <button key={card.id}
+            disabled={busy || matched.includes(cardIndex)} className={'memory-card ' + (matched.includes(cardIndex) ? 'matched' : '')}
+            aria-label={flipped.includes(cardIndex) || matched.includes(cardIndex) ? card.symbol : `Tarjeta ${cardIndex + 1}`}
+            onClick={() => flip(cardIndex)}>{flipped.includes(cardIndex) || matched.includes(cardIndex) ? card.symbol : '❔'}</button>)}</div>
+          {matched.length === 8 && !saved && <button className="primary" disabled={busy} onClick={() => finish(4)}>
+            {busy ? 'Guardando resultado…' : 'Guardar resultado'}
+          </button>}
+        </> : <>
+          <div className="progress"><div style={{ width: `${(index + 1) * 20}%` }} /></div>
+          <p>Pregunta {index + 1} de 5 · ⭐ {score} puntos</p><h1 className="question">{question?.q}</h1>
+          <div className="options">{question?.options.map(option => <button disabled={!!feedback || busy} key={option} onClick={() => answer(option)}>{option}</button>)}</div>
+          {feedback && <div className="feedback" role="status"><strong>{feedback}</strong>
+            <button className="primary" disabled={busy} onClick={next}>{busy ? 'Guardando resultado…' : index === 4 ? 'Guardar resultado' : 'Siguiente →'}</button>
+          </div>}
+        </>}
+      </section>}
+      {page === 'resultado' && <section className="hero">
+        <span className="mascot">🏆🎊</span><h1>¡Excelente trabajo, {student?.nombre}!</h1>
+        <p>Completaste {activity?.titulo}.</p><div className="result">⭐ {score} / {activity?.codigo === 'memoria' ? 4 : 5}</div>
+        <p>Tu resultado se guardó en la base de datos.</p><button className="primary" onClick={() => navigate('catalogo')}>Jugar otra actividad →</button>
+      </section>}
+      {page === 'docentes' && <TeacherPanel onBack={() => navigate('inicio')} onStudentAccess={rememberStudent} />}
+    </main>
+    <footer>🌈 Explora y Aprende · Proyecto de Desarrollo Web 2026</footer>
+  </div>;
+}

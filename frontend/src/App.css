@@ -24,3 +24,17 @@ footer{border-top:1px solid #ffffff1b;color:#c9b7ed;background:#1d1036a8}.alert{
 @media(max-width:750px){.home-showcase{grid-template-columns:1fr}.hero{padding:35px 5px}.hero h1{letter-spacing:-.5px}.showcase-item{padding:15px}.cards{grid-template-columns:1fr 1fr}.tile{min-height:205px}}
 @media(max-width:550px){header{padding:15px}.cards{grid-template-columns:1fr}.hero p{font-size:16px}.hero .mascot{font-size:68px}.features span{font-size:13px}.filter{padding:12px}.panel{padding:20px}.hero-badges span{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.mascot{animation:none}.tile,.primary{transition:none}}
+/* Accesos de docentes y alumnos */
+.teacher-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.teacher-heading .back{border:1px solid #ffffff55;white-space:nowrap}
+.session-note,.help-text{font-size:14px;line-height:1.6}
+.teacher-login .alert{margin-top:20px}.teacher-login input{font-size:18px}
+.student-access{margin-top:28px}.student-access h2{font-size:23px}
+.remembered-students{border-top:1px solid #ddd1f1;margin-top:28px;padding-top:15px}
+.remembered-students h2{font-size:22px}
+.remembered-students ul{padding:0;list-style:none;display:grid;gap:10px}
+.remembered-students li{display:flex;gap:8px;align-items:stretch}
+.profile-button{flex:1;text-align:left;background:#eee6ff;border:1px solid #c9b6f5;border-radius:12px;color:#3f2c79;padding:12px;font-weight:bold}
+.forget-button{border:1px solid #c9b6f5;border-radius:12px;background:#fff;color:#604786;padding:10px}
+.notice{background:#ffffff18;border:1px solid #ffffff40;border-radius:12px;padding:14px}
+@media(max-width:550px){.teacher-heading{gap:0}.teacher-heading h1{font-size:31px}.remembered-students li{flex-wrap:wrap}.profile-button{min-width:65%}}
